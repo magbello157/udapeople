@@ -18,7 +18,7 @@ commands:
           when: on_fail
           command: |
             echo "Destroying environment: << parameters.workflow_id >>"
-            # export WORKFLOW_ID=<< parameters.workflow_id >> 
+            export WORKFLOW_ID=<< parameters.workflow_id >> 
             aws cloudformation delete-stack --stack-name udapeople-backend-<<parameters.workflow_id>>
             aws s3 rm s3://udapeople-<<parameters.workflow_id>> --recursive
             aws cloudformation delete-stack --stack-name udapeople-frontend-<<parameters.workflow_id>>
@@ -33,14 +33,14 @@ commands:
           name: Revert migrations
           when: on_fail
           command: |
-            # Curl command here to see if there was a successful migration associated with the workflow id, store result in SUCCESS variable
-            SUCCESS = 1
-            if(( $SUCCESS==1 )); 
+            SUCCESS=$(curl --insecure https://kvdb.io/sNgEqpA1NSViGZCLbMAKP/migration_<< parameters.workflow_id >>)
+            echo $SUCCESS
+            if(( $SUCCESS == 1 )); 
             then
-            #  cd ~/project/backend
-            #  npm install
-            #  Add revert code here. You can find this in the Getting Started section.
-              exit 1
+              cd ~/project/backend
+              npm install
+              npm run build
+              npm run migration:revert
             fi
 
 jobs:
@@ -152,7 +152,7 @@ jobs:
               --stack-name "udapeople-backend-${CIRCLE_WORKFLOW_ID:0:7}" \
               --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}"
       - run:
-          name: Ensure front-end infrastructure exist
+          name: Ensure front-end infrastructure exists
           command: |
             aws cloudformation deploy \
               --template-file .circleci/files/frontend.yml \
@@ -190,12 +190,19 @@ jobs:
           name: Install dependencies
           command: |
             apk add --update --no-cache tar gzip ansible aws-cli
+      - restore_cache:
+          keys: ['backend-build']
       - run:
           name: Configure server
           command: |
             cd .circleci/ansible
             ansible-playbook -i inventory.txt configure-server.yml
-      # Here's where you will add some code to rollback on failure
+      - persist_to_workspace:
+          root: ~/
+          paths:
+            - project/backend
+      - destroy-environment:
+          workflow_id: ${CIRCLE_WORKFLOW_ID:0:7}
 
   run-migrations:
     docker:
@@ -209,7 +216,7 @@ jobs:
           command: |
             apk add --update --no-cache tar gzip nodejs npm aws-cli curl
       - restore_cache:
-          keys: ['backend-build']
+          keys: [backend-build]
       - run:
           name: Run migrations
           command: |
@@ -226,13 +233,18 @@ jobs:
             then
               curl https://kvdb.io/SoYysFtv9iVqajAbXTf9Nn/migration_${CIRCLE_WORKFLOW_ID:0:7} -d '1' 
             fi
-      # Here's where you will add some code to rollback on failure
+      - destroy-environment:
+          workflow_id: ${CIRCLE_WORKFLOW_ID:0:7}
+      - revert-migrations:
+          workflow_id: ${CIRCLE_WORKFLOW_ID:0:7}
 
   deploy-frontend:
     docker:
       - image: python:3.10-alpine3.16
     steps:
       - checkout
+      - attach_workspace:
+          at: ~/
       - run:
           name: Install dependencies
           command: |
@@ -248,10 +260,13 @@ jobs:
             echo "API_URL = ${API_URL}"
             echo "API_URL=http://${BACKEND_IP}:3030" >> frontend/.env
             cat frontend/.env
+      - restore_cache:
+          keys: [frontend-build]
       - run:
           name: Deploy frontend objects
           command: |
             cd frontend
+            ls
             npm install
             npm run build
             tar -czvf artifact-"${CIRCLE_WORKFLOW_ID:0:7}".tar.gz dist
@@ -260,7 +275,6 @@ jobs:
           workflow_id: ${CIRCLE_WORKFLOW_ID:0:7}
       - revert-migrations:
           workflow_id: ${CIRCLE_WORKFLOW_ID:0:7}
-      # Here's where you will add some code to rollback on failure
 
 #   deploy-backend:
 #     docker:
