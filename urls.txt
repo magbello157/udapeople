@@ -1,2 +1,2 @@
 URL01: https://github.com/magbello157/udapeople
-URL02: http://udapeople-b6f422e.s3-website-us-east-1.amazonaws.com
+URL02: http://udapeople-74e7286.s3-website-us-east-1.amazonaws.com
