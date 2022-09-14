@@ -345,6 +345,10 @@ jobs:
             echo "${BACKEND_IP}"
             export API_URL="http://${BACKEND_IP}:3030"
             echo "${API_URL}"
+
+            echo "Awaiting backend server instantiation (60s)"            
+            sleep 60
+
             if curl -s "${API_URL}/api/status" | grep "ok"
             then 
               return 0
