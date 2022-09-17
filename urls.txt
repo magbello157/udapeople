@@ -1,4 +1,4 @@
 URL01: https://github.com/magbello157/udapeople-ci-cd-pipeline
-URL02: http://udapeople-3603cef.s3-website-us-east-1.amazonaws.com
+URL02: http://udapeople-87be034.s3-website-us-east-1.amazonaws.com
 URL03: http://dz5or12ohj0me.cloudfront.net/
-URL04: http://54.158.249.71:3030/api/status
+URL04: http://35.172.192.245:3030/api/status
